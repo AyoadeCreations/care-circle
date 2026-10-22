@@ -32,7 +32,7 @@ Express Web Server (port 3000)
     │  MCP client (StreamableHTTPClientTransport)
     │  HTTP POST to /mcp
     ▼
-MCP Server (port 3001)
+MCP Server (same process in unified mode, or port 3001 in dev)
     │  McpServer + StreamableHTTPServerTransport
     │  5 tools: capture, confirm, plan, status, handoff
     ▼
@@ -50,13 +50,14 @@ care-circle/
 ├── src/
 │   ├── db/           SQLite schema, seed data, data-access layer
 │   ├── mcp/          MCP server + tool implementations
-│   ├── server/       Express web server, MCP client, REST routes
+│   ├── server/       Express web server, MCP client, REST routes, unified server
 │   ├── types/        Shared TypeScript interfaces
 │   ├── utils/        Input validation (Zod), update text parser
 │   └── web/          Static HTML/CSS/JS frontend
-├── tests/            Vitest automated tests (34 tests)
+├── tests/            Vitest automated tests (43 tests)
 ├── dist/             Compiled JavaScript output (git-ignored)
 ├── data/             SQLite database file (git-ignored)
+├── render.yaml       Render.com deployment configuration
 └── ...config files
 ```
 
@@ -74,7 +75,7 @@ care-circle/
 
 ```bash
 # 1. Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/YOUR_USERNAME/care-circle.git
 cd care-circle
 
 # 2. Install dependencies
@@ -91,7 +92,19 @@ npm run build
 
 ## Running locally
 
-Care Circle uses two processes: an MCP server and a web server. Start them in **two separate terminals**:
+### Option A — Unified server (recommended)
+
+Single process, single port. MCP and web UI on port 3000.
+
+```bash
+npm run start:unified
+# Output: [Care Circle] Unified server running at http://0.0.0.0:3000
+# Output: [Care Circle] MCP endpoint: http://0.0.0.0:3000/mcp
+```
+
+Set `MCP_URL=http://localhost:3000/mcp` in your `.env` (or it defaults to `http://127.0.0.1:3001/mcp`).
+
+### Option B — Two-process dev mode
 
 **Terminal 1 — MCP server:**
 ```bash
@@ -103,20 +116,19 @@ node dist/mcp/index.js
 ```bash
 node dist/server/index.js
 # Output: [Web] Care Circle web app at http://localhost:3000
-#         [Web] MCP server connected at http://127.0.0.1:3001/mcp
 ```
 
-Then open **http://localhost:3000** in your browser.
-
-The database is created automatically on first start and seeded with fictional demo data (two care recipients, several tasks across different statuses).
-
-### Single-command dev (with file watching)
+### Single-command dev with file watching
 
 ```bash
 npm run dev
 ```
 
-This compiles TypeScript and starts both servers with `--watch` mode. Requires `concurrently` (already installed).
+Compiles TypeScript and starts both servers with `--watch` mode.
+
+Then open **http://localhost:3000** in your browser.
+
+The database is created automatically on first start and seeded with fictional demo data (two care recipients, several tasks).
 
 ---
 
@@ -126,7 +138,7 @@ This compiles TypeScript and starts both servers with `--watch` mode. Requires `
 npm test
 ```
 
-Runs 34 automated tests covering all 8 required scenarios:
+Runs 43 automated tests covering:
 
 1. Proposed update is not treated as confirmed before confirmation
 2. Confirmed tasks persist after restarting the server
@@ -136,12 +148,15 @@ Runs 34 automated tests covering all 8 required scenarios:
 6. System does not invent a task owner or deadline when one is missing
 7. Invalid task IDs and malformed inputs produce safe errors
 8. End-to-end vertical slice: capture → confirm → plan → complete → handoff
+9. Regression: HTTP status codes — 404 for not-found, 422 for validation only
+10. Regression: CSS `[hidden]` attribute must be respected
+11. Regression: Duplicate submission prevention in frontend
 
 ---
 
 ## MCP Tools
 
-All tools are exposed over **Streamable HTTP** at `POST /mcp` on port 3001.
+All tools are exposed over **Streamable HTTP** at `POST /mcp`.
 
 ### `capture_care_update`
 
@@ -225,50 +240,88 @@ Generate a handoff summary from live database state. Saves the handoff to the DB
 | `task_history` | Audit log of every status change |
 | `handoffs` | Generated handoff summaries |
 
+The database is created and seeded automatically on first start.
+
 ---
 
 ## Environment variables
 
-See `.env.example` for all available options. For local development, defaults work without any changes.
-
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `3000` | Web server port |
-| `MCP_PORT` | `3001` | MCP server port |
+| `MCP_PORT` | `3001` | MCP server port (two-process mode only) |
+| `MCP_URL` | `http://127.0.0.1:3001/mcp` | MCP server endpoint URL |
 | `DB_PATH` | `./data/care-circle.db` | Path to SQLite database |
-| `NODE_ENV` | `development` | Environment (`development` \| `production`) |
+| `NODE_ENV` | `development` | Environment |
+| `ALLOWED_ORIGINS` | _(empty)_ | Comma-separated CORS allowed origins |
 
 ---
 
-## Demo script (for 3-minute video)
+## Deployment
 
-See [`DEMO_SCRIPT.md`](./DEMO_SCRIPT.md) for the full walkthrough.
+### Render.com (recommended)
 
-**30-second summary:**
-1. Open http://localhost:3000 — select "Margaret Chen"
+1. Push this repo to GitHub
+2. Go to [render.com](https://render.com) → New → Web Service
+3. Connect your GitHub repo
+4. Render detects `render.yaml` automatically
+5. Set environment variables if needed (defaults work for a first deploy)
+6. Click Deploy
+
+The `render.yaml` configures:
+- Build: `npm install && npm run build`
+- Start: `npm run start:unified`
+- Persistent disk at `/opt/render/project/data` for the SQLite database
+- Health check at `/health`
+
+### Other platforms (Railway, Fly.io)
+
+Any platform that supports:
+- Node.js 18+ runtime
+- Persistent disk storage (for SQLite)
+- Single HTTP port
+
+Use `npm run start:unified` as the start command. Set `MCP_URL` to `http://localhost:$PORT/mcp`.
+
+---
+
+## Demo script
+
+See [`DEMO_SCRIPT.md`](./DEMO_SCRIPT.md) for the full 3-minute walkthrough.
+
+**Quick summary:**
+1. Open the app — select "Margaret Chen"
 2. Enter name "Sarah (daughter)" in sidebar
-3. Paste update: *"Transport for Mum's appointment has changed to Tuesday at 10 AM. We still need to confirm who will pick her up."*
+3. Paste: *"Transport for Mum's appointment has changed to Tuesday at 10 AM. We still need to confirm who will pick her up."*
 4. Click **Analyse update** — review the proposed tasks
 5. Edit the responsible person, click **Confirm and save**
 6. See the task appear in today's plan
-7. Click the circle to mark the previous task complete
+7. Click the circle to mark a task complete
 8. Click **Generate handoff** — copy the summary
 
 ---
 
 ## Known limitations
 
-- **No LLM integration:** The update parser uses regex/heuristics, not an LLM. It works well for explicit updates but won't catch implied tasks in complex language.
-- **Single-user session:** There is no authentication. In production, user sessions and role-based access would be needed.
+- **No LLM integration:** The update parser uses regex/heuristics, not an LLM. Works well for explicit updates but won't catch implied tasks in complex language.
+- **Single-user session:** No authentication. In production, user sessions and role-based access would be needed.
 - **No real-time sync:** Multiple browser tabs don't auto-refresh. Use the Refresh button.
-- **Local only:** Designed for localhost. Deploying publicly requires HTTPS, auth, and `0.0.0.0` binding.
-- **Date parsing:** Purely numeric dates (10/11) are flagged as ambiguous rather than assumed.
+- **Alexa+ integration:** This is a self-hosted MCP experience with its own web client. The MCP server is wired up correctly to the MCP spec (Streamable HTTP, spec 2025-11-25) but is not directly connected to an Alexa+ agent in this submission.
+- **SQLite persistence:** The database file is local to the server. Suitable for demo deployments; production would use an external database.
 
-## Potential next steps
+## Tools and SDKs used
 
-- Add an LLM (e.g., via Amazon Bedrock) to improve update parsing accuracy
-- Alexa+ integration: connect the MCP server directly to an Alexa+ agent skill
-- Push notifications when tasks go overdue
-- Multi-caregiver auth and role assignment
-- Mobile-native app using the same MCP backend
-- Export handoffs as PDF or share via messaging apps
+| Tool / SDK | Role |
+|---|---|
+| `@modelcontextprotocol/sdk` v1.32.1 | MCP server and client implementation |
+| `express` | HTTP server for both web UI and MCP endpoint |
+| `better-sqlite3` | SQLite database access |
+| `zod` | Input validation for all MCP tool inputs |
+| `vitest` | Test runner (43 automated tests) |
+| `typescript` | Type safety across the full codebase |
+
+---
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
