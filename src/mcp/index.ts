@@ -201,7 +201,7 @@ export function createMcpServer(): McpServer {
  */
 export async function startMcpServer(): Promise<void> {
   // Seed DB with demo data on first run
-  seedDatabase();
+  await seedDatabase();
 
   const app = express();
   app.use(express.json());

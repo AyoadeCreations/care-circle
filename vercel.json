@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run start:unified",
+  "installCommand": "npm install",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/dist/server/unified.js" }
+  ],
+  "functions": {
+    "dist/server/unified.js": {
+      "maxDuration": 60
+    }
+  }
+}

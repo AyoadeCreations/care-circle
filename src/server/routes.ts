@@ -51,12 +51,10 @@ export function createApiRouter(): Router {
   const router = Router();
 
   // ── GET /api/recipients ──────────────────────────────────────────────────
-  router.get('/recipients', (_req: Request, res: Response) => {
+  router.get('/recipients', async (_req: Request, res: Response) => {
     try {
-      // Recipients are read directly from DB here — no MCP tool needed for this.
-      // This keeps the MCP tool surface focused on care coordination operations.
       const db = getDb();
-      const recipients = getRecipients(db);
+      const recipients = await getRecipients(db);
       res.json({ recipients });
     } catch (err) {
       console.error('[API] /recipients error:', err);

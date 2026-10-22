@@ -22,7 +22,7 @@ const PORT = parseInt(process.env.PORT ?? '3000');
 
 async function startUnifiedServer() {
   // Seed DB with demo data on first run
-  seedDatabase();
+  await seedDatabase();
 
   const app = express();
   app.use(express.json());
