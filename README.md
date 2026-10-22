@@ -75,7 +75,7 @@ care-circle/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/care-circle.git
+git clone https://github.com/AyoadeCreations/care-circle.git
 cd care-circle
 
 # 2. Install dependencies
