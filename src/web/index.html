@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Care Circle — Caregiver Coordination</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <meta name="description" content="Care Circle helps families coordinate care responsibilities and hand off accurate information between caregivers." />
+</head>
+<body>
+  <!-- ══ Header ══════════════════════════════════════════════════════════════ -->
+  <header class="app-header" role="banner">
+    <div class="header-inner">
+      <div class="logo-area">
+        <span class="logo-icon" aria-hidden="true">🤝</span>
+        <h1 class="logo-text">Care Circle</h1>
+      </div>
+      <p class="tagline">Coordinate care responsibilities. Hand off with confidence.</p>
+      <span class="demo-badge" aria-label="This application uses fictional demo data">
+        DEMO — Fictional Data
+      </span>
+    </div>
+  </header>
+
+  <!-- ══ Main ════════════════════════════════════════════════════════════════ -->
+  <main id="main" class="main-layout" role="main">
+
+    <!-- Sidebar: recipient selector + quick actions -->
+    <aside class="sidebar" aria-label="Care recipient selector">
+      <section class="recipient-section">
+        <h2 class="section-title">Care recipient</h2>
+        <div id="recipient-list" class="recipient-list" role="listbox" aria-label="Select a care recipient">
+          <div class="skeleton-list" aria-busy="true" aria-label="Loading recipients…">
+            <div class="skeleton-item"></div>
+            <div class="skeleton-item"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Caregiver name input -->
+      <section class="caregiver-section">
+        <h2 class="section-title">Your name</h2>
+        <label for="caregiver-name" class="sr-only">Your display name</label>
+        <input
+          type="text"
+          id="caregiver-name"
+          class="caregiver-input"
+          placeholder="e.g. Sarah (daughter)"
+          maxlength="100"
+          autocomplete="name"
+          aria-describedby="caregiver-hint"
+        />
+        <p id="caregiver-hint" class="input-hint">Used to record who made each change</p>
+      </section>
+
+      <!-- Quick actions -->
+      <section class="actions-section">
+        <button
+          id="btn-refresh"
+          class="btn btn-secondary btn-full"
+          aria-label="Refresh today's plan"
+        >
+          ↻ Refresh plan
+        </button>
+        <button
+          id="btn-handoff"
+          class="btn btn-accent btn-full"
+          aria-label="Generate caregiver handoff summary"
+        >
+          📋 Generate handoff
+        </button>
+      </section>
+    </aside>
+
+    <!-- Main content area -->
+    <div class="content-area">
+
+      <!-- ══ Global error banner (shown when API or MCP fails) ══════════════ -->
+      <div id="global-error" class="alert alert-error global-error" role="alert" hidden>
+        <span id="global-error-text"></span>
+        <button id="btn-retry" class="btn btn-secondary btn-small" aria-label="Retry loading data">
+          ↻ Retry
+        </button>
+      </div>
+
+      <!-- ══ Dashboard ═══════════════════════════════════════════════════════ -->
+      <section id="dashboard" class="dashboard" aria-label="Today's care plan">
+        <header class="dashboard-header">
+          <h2 id="dashboard-title" class="section-title">Today's plan</h2>
+          <span id="dashboard-recipient" class="recipient-name-display"></span>
+          <span id="plan-timestamp" class="plan-timestamp"></span>
+        </header>
+
+        <div id="plan-content" class="plan-content" aria-live="polite" aria-busy="false">
+          <div class="empty-state" id="empty-state-select">
+            <span class="empty-icon" aria-hidden="true">👆</span>
+            <p>Select a care recipient to view today's plan</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ Update input ════════════════════════════════════════════════════ -->
+      <section class="update-section" aria-label="Submit a care update">
+        <h2 class="section-title">Add an update</h2>
+        <p class="section-desc">
+          Describe a change, appointment, or task in plain language.
+          Care Circle will suggest tasks for you to review before saving.
+        </p>
+
+        <div class="update-composer">
+          <label for="update-text" class="sr-only">Care update text</label>
+          <textarea
+            id="update-text"
+            class="update-textarea"
+            placeholder="e.g. Transport for Mum's appointment has changed to Tuesday at 10 AM. We still need to confirm who will pick her up."
+            rows="4"
+            maxlength="2000"
+            aria-describedby="update-char-count"
+          ></textarea>
+          <div class="textarea-footer">
+            <span id="update-char-count" class="char-count" aria-live="polite">0 / 2000</span>
+            <button
+              id="btn-capture"
+              class="btn btn-primary"
+              aria-label="Analyse update and propose tasks"
+            >
+              Analyse update →
+            </button>
+          </div>
+        </div>
+
+        <!-- Update error -->
+        <div id="update-error" class="alert alert-error" role="alert" hidden>
+          <strong>Error:</strong> <span id="update-error-text"></span>
+        </div>
+      </section>
+
+      <!-- ══ Confirm panel (shows after capture) ════════════════════════════ -->
+      <section
+        id="confirm-panel"
+        class="confirm-panel"
+        aria-label="Review proposed tasks"
+        hidden
+      >
+        <h2 class="section-title">Review proposed tasks</h2>
+        <p class="section-desc">
+          Review the tasks below. Edit descriptions, dates, or responsible people as needed.
+          <strong>Nothing is saved until you click Confirm.</strong>
+        </p>
+
+        <div id="ambiguities-list" class="ambiguities" hidden role="alert" aria-live="polite"></div>
+
+        <div id="proposed-tasks-list" class="proposed-tasks-list"></div>
+
+        <div class="confirm-actions">
+          <button id="btn-confirm" class="btn btn-primary" aria-label="Confirm and save tasks">
+            ✔ Confirm and save
+          </button>
+          <button id="btn-discard" class="btn btn-ghost" aria-label="Discard proposed tasks">
+            Discard
+          </button>
+        </div>
+
+        <div id="confirm-error" class="alert alert-error" role="alert" hidden>
+          <strong>Error:</strong> <span id="confirm-error-text"></span>
+        </div>
+        <div id="confirm-success" class="alert alert-success" role="status" hidden>
+          <span id="confirm-success-text"></span>
+        </div>
+      </section>
+
+      <!-- ══ Handoff panel ═══════════════════════════════════════════════════ -->
+      <section
+        id="handoff-panel"
+        class="handoff-panel"
+        aria-label="Caregiver handoff summary"
+        hidden
+      >
+        <header class="handoff-header">
+          <h2 class="section-title">Handoff summary</h2>
+          <button
+            id="btn-copy-handoff"
+            class="btn btn-secondary btn-small"
+            aria-label="Copy handoff text to clipboard"
+          >
+            Copy
+          </button>
+          <button
+            id="btn-close-handoff"
+            class="btn btn-ghost btn-small"
+            aria-label="Close handoff panel"
+          >
+            ✕
+          </button>
+        </header>
+        <pre id="handoff-text" class="handoff-text" aria-live="polite" tabindex="0"></pre>
+      </section>
+
+    </div><!-- /content-area -->
+  </main>
+
+  <!-- ══ Loading overlay ════════════════════════════════════════════════════ -->
+  <div id="loading-overlay" class="loading-overlay" hidden aria-live="polite" role="status">
+    <div class="spinner" aria-hidden="true"></div>
+    <span id="loading-label">Loading…</span>
+  </div>
+
+  <!-- ══ Toast notifications ════════════════════════════════════════════════ -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

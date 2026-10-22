@@ -1,0 +1,19 @@
+render:
+  - type: web
+    name: care-circle
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:unified
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MCP_URL
+        value: http://localhost:3000/mcp
+      - key: DB_PATH
+        value: ./data/care-circle.db
+    disk:
+      name: data
+      mountPath: /opt/render/project/data
+      sizeGB: 1
+    healthCheckPath: /health
