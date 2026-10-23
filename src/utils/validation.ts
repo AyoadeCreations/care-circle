@@ -66,6 +66,7 @@ export const UpdateTaskStatusInput = z.object({
 export const GenerateHandoffInput = z.object({
   recipient_id: RecipientId,
   generated_by: CaregiverName,
+  handed_to: z.string().trim().max(100).nullable().optional(),
 });
 
 // ─── Sanitisation helpers ────────────────────────────────────────────────────

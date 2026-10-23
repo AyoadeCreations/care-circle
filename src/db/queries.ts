@@ -4,7 +4,7 @@
  * No raw SQL outside this file.
  */
 import type { Client } from '@libsql/client';
-import type { CareRecipient, CareTask, CareUpdate, Handoff, TaskHistory, TaskStatus } from '../types/index.js';
+import type { CareRecipient, Caregiver, CareTask, CareUpdate, Handoff, TaskHistory, TaskStatus } from '../types/index.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -27,6 +27,13 @@ export async function getRecipients(db: Client): Promise<CareRecipient[]> {
 export async function getRecipientById(db: Client, id: number): Promise<CareRecipient | null> {
   const result = await db.execute({ sql: 'SELECT * FROM care_recipients WHERE id = ?', args: [id] });
   return row<CareRecipient>(result);
+}
+
+// ─── Caregivers ─────────────────────────────────────────────────────────────────
+
+export async function getCaregivers(db: Client): Promise<Caregiver[]> {
+  const result = await db.execute('SELECT * FROM caregivers ORDER BY display_name');
+  return rows<Caregiver>(result);
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -161,13 +168,14 @@ export async function storeHandoff(
   db: Client,
   recipientId: number,
   generatedBy: string,
-  content: string
+  content: string,
+  handedTo: string | null = null
 ): Promise<Handoff> {
   const now = new Date().toISOString();
   const result = await db.execute({
-    sql: `INSERT INTO handoffs (recipient_id, generated_by, content, generated_at)
-          VALUES (?, ?, ?, ?)`,
-    args: [recipientId, generatedBy, content, now],
+    sql: `INSERT INTO handoffs (recipient_id, generated_by, handed_to, content, generated_at)
+          VALUES (?, ?, ?, ?, ?)`,
+    args: [recipientId, generatedBy, handedTo, content, now],
   });
   const handoff = await db.execute({
     sql: 'SELECT * FROM handoffs WHERE id = ?',

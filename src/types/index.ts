@@ -51,6 +51,7 @@ export interface Handoff {
   id: number;
   recipient_id: number;
   generated_by: string;
+  handed_to: string | null;
   content: string;
   generated_at: string;
 }
@@ -94,6 +95,7 @@ export interface HandoffSummary {
   recipient_name: string;
   generated_at: string;
   generated_by: string;
+  handed_to: string | null;
   completed_since_last_handoff: CareTask[];
   outstanding: CareTask[];
   upcoming_appointments: CareTask[];

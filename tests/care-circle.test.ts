@@ -356,3 +356,76 @@ describe('Regression — Duplicate submission prevention', () => {
     expect(js).toMatch(/if\s*\(state\.isSubmitting\)\s*return/);
   });
 });
+
+// Regression: handoff caregiver selection and handed_to field
+describe('Regression — Handoff caregiver selection', () => {
+  let db: Client;
+  beforeEach(async () => { db = await makeTestDb(); });
+  afterEach(() => { db.close(); });
+
+  it('generateHandoff accepts and persists handed_to', async () => {
+    const h = await generateHandoff(db, { recipient_id: 1, generated_by: 'Sarah', handed_to: 'James (son-in-law)' });
+    expect(h.handed_to).toBe('James (son-in-law)');
+    expect(h.notes).toContain('Handing over to: James (son-in-law)');
+  });
+
+  it('handoff without handed_to still works', async () => {
+    const h = await generateHandoff(db, { recipient_id: 1, generated_by: 'Sarah' });
+    expect(h.handed_to).toBeNull();
+    expect(h.notes).not.toContain('Handing over to');
+  });
+
+  it('handoff with handed_to persists to database', async () => {
+    await generateHandoff(db, { recipient_id: 1, generated_by: 'Sarah', handed_to: 'Priya (neighbour)' });
+    const r = await db.execute('SELECT handed_to FROM handoffs WHERE recipient_id = 1 ORDER BY id DESC LIMIT 1');
+    expect(r.rows[0]?.handed_to).toBe('Priya (neighbour)');
+  });
+
+  it('HTML has handoff-to select element', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const html = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'web', 'index.html'), 'utf-8');
+    expect(html).toContain('handoff-to');
+    expect(html).toContain('handoff-recipient');
+    expect(html).toContain('handoff-from');
+  });
+
+  it('API has /api/caregivers endpoint in routes', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const routes = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'server', 'routes.ts'), 'utf-8');
+    expect(routes).toContain("'/caregivers'");
+    expect(routes).toContain('getCaregivers');
+  });
+
+  it('no prominent DEMO badge in HTML', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const html = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'web', 'index.html'), 'utf-8');
+    expect(html).not.toMatch(/DEMO.*Fictional/);
+    expect(html).toContain('Sample workspace');
+  });
+
+  it('Fraunces display font loaded', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const html = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'web', 'index.html'), 'utf-8');
+    expect(html).toContain('Fraunces');
+  });
+
+  it('CSS uses warm ivory and forest green palette', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const css = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'web', 'style.css'), 'utf-8');
+    expect(css).toContain('#F7F5EF');
+    expect(css).toContain('#244A3A');
+    expect(css).toContain('#B9674E');
+  });
+
+  it('[hidden] !important still present', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const css = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'web', 'style.css'), 'utf-8');
+    expect(css).toMatch(/\[hidden\]\s*\{[^}]*display:\s*none\s*!important/);
+  });
+});

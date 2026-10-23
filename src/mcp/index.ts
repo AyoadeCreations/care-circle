@@ -170,10 +170,11 @@ export function createMcpServer(): McpServer {
     {
       recipient_id: z.number().int().positive().describe('ID of the care recipient'),
       generated_by: z.string().min(1).max(100).describe('Display name of the person generating the handoff'),
+      handed_to: z.string().max(100).nullable().optional().describe('Name of the caregiver receiving the handoff'),
     },
-    async ({ recipient_id, generated_by }) => {
+    async ({ recipient_id, generated_by, handed_to }) => {
       try {
-        const result = await generateHandoff(db, { recipient_id, generated_by });
+        const result = await generateHandoff(db, { recipient_id, generated_by, handed_to });
         return {
           content: [{
             type: 'text',

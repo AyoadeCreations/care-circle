@@ -198,7 +198,7 @@ export async function generateHandoff(
   if (!parsed.success) {
     throw new ToolError(formatZodError(parsed.error), 'INVALID_INPUT');
   }
-  const { recipient_id, generated_by } = parsed.data;
+  const { recipient_id, generated_by, handed_to } = parsed.data;
 
   const recipient = await getRecipientById(db, recipient_id);
   if (!recipient) {
@@ -236,8 +236,11 @@ export async function generateHandoff(
     `CARE CIRCLE HANDOFF — ${recipient.name}`,
     `Generated: ${now.toLocaleDateString('en-GB', { dateStyle: 'full' })} at ${now.toLocaleTimeString('en-GB', { timeStyle: 'short' })}`,
     `Prepared by: ${generated_by}`,
-    '',
   ];
+  if (handed_to) {
+    lines.push(`Handing over to: ${handed_to}`);
+  }
+  lines.push('');
 
   if (completed_since_last_handoff.length > 0) {
     lines.push('✅ COMPLETED SINCE LAST HANDOFF');
@@ -277,13 +280,14 @@ export async function generateHandoff(
   }
 
   const content = lines.join('\n');
-  await storeHandoff(db, recipient_id, generated_by, content);
+  await storeHandoff(db, recipient_id, generated_by, content, handed_to ?? null);
 
   return {
     recipient_id,
     recipient_name: recipient.name,
     generated_at: now.toISOString(),
     generated_by,
+    handed_to: handed_to ?? null,
     completed_since_last_handoff,
     outstanding,
     upcoming_appointments,

@@ -11,12 +11,19 @@ import path from 'path';
 import { createApiRouter } from '../src/server/routes.js';
 import { createMcpServer } from '../src/mcp/index.js';
 import { seedDatabase } from '../src/db/seed.js';
+import { getDb } from '../src/db/database.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
 // Initialise DB and seed on cold start (runs once per function instance)
 let _initialised = false;
 async function ensureInitialised() {
   if (_initialised) return;
+  // Migrate: add handed_to column to handoffs if it doesn't exist
+  try {
+    await getDb().execute('ALTER TABLE handoffs ADD COLUMN handed_to TEXT');
+  } catch {
+    // Column already exists — expected on fresh DBs or after migration
+  }
   await seedDatabase();
   _initialised = true;
 }

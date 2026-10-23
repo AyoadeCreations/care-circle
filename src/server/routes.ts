@@ -16,7 +16,7 @@
 import { Router, type Request, type Response } from 'express';
 import { callMcpTool, McpConnectionError, McpToolError } from './mcpClient.js';
 import { getDb } from '../db/database.js';
-import { getRecipients } from '../db/queries.js';
+import { getRecipients, getCaregivers } from '../db/queries.js';
 
 /**
  * Map MCP tool errors to appropriate HTTP status codes.
@@ -59,6 +59,18 @@ export function createApiRouter(): Router {
     } catch (err) {
       console.error('[API] /recipients error:', err);
       res.status(500).json({ error: 'Failed to load care recipients' });
+    }
+  });
+
+  // ── GET /api/caregivers ──────────────────────────────────────────────────
+  router.get('/caregivers', async (_req: Request, res: Response) => {
+    try {
+      const db = getDb();
+      const caregivers = await getCaregivers(db);
+      res.json({ caregivers });
+    } catch (err) {
+      console.error('[API] /caregivers error:', err);
+      res.status(500).json({ error: 'Failed to load caregivers' });
     }
   });
 
@@ -150,7 +162,7 @@ export function createApiRouter(): Router {
 
   // ── POST /api/handoff ────────────────────────────────────────────────────
   router.post('/handoff', async (req: Request, res: Response) => {
-    const { recipient_id, generated_by } = req.body ?? {};
+    const { recipient_id, generated_by, handed_to } = req.body ?? {};
     if (!recipient_id || !generated_by) {
       res.status(400).json({ error: 'recipient_id and generated_by are required' });
       return;
@@ -160,6 +172,7 @@ export function createApiRouter(): Router {
       const result = await callMcpTool('generate_care_handoff', {
         recipient_id: Number(recipient_id),
         generated_by: String(generated_by),
+        handed_to: handed_to ? String(handed_to) : null,
       });
       res.json(result);
     } catch (err) {

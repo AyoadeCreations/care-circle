@@ -86,6 +86,7 @@ export async function initSchema(client: Client): Promise<void> {
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
       recipient_id INTEGER NOT NULL REFERENCES care_recipients(id),
       generated_by TEXT NOT NULL,
+      handed_to    TEXT,
       content      TEXT NOT NULL,
       generated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
