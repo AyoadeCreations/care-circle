@@ -8,13 +8,10 @@
  */
 import express, { type Request, type Response } from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { createApiRouter } from '../src/server/routes.js';
 import { createMcpServer } from '../src/mcp/index.js';
 import { seedDatabase } from '../src/db/seed.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Initialise DB and seed on cold start (runs once per function instance)
 let _initialised = false;
@@ -71,8 +68,9 @@ app.options('/mcp', (req: Request, res: Response) => {
 });
 
 // ── Web UI + API ──────────────────────────────────────────────────────────────
-// Serve static frontend files — resolve to src/web from the project root
-const webDir = path.resolve(__dirname, '..', 'src', 'web');
+// Serve static frontend files — use process.cwd() so it works on Vercel
+// (Lambda runs from project root) and locally (cwd is project root)
+const webDir = path.resolve(process.cwd(), 'src', 'web');
 app.use(express.static(webDir));
 
 // API routes
